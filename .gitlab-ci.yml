@@ -1,0 +1,19 @@
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  tags:
+    - loader
+  script:
+    - cp /etc/prod_env ./.env
+    - docker build -t check_your_skin_loader.
+
+deploy:
+  stage: deploy
+  tags:
+    - loader
+  script:
+    - docker stop check_your_skin_loader || true && docker rm check_your_skin_loader || true
+    - docker run --name check_your_skin_loader -p 5001:5000 -v /var/log/loaders:/var/log/loaders -d check_your_skin_loader
