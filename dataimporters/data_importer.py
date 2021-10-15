@@ -14,29 +14,10 @@ import nest_asyncio
 nest_asyncio.apply()
 
 load_dotenv()
-# in_auth = os.getenv('IN_AUTH')
-# in_good_status = os.getenv('IN_GOOD_STATUS')
-# in_sep = os.getenv('IN_SEP')
-# scheme_in = os.getenv('SCHEME_IN')
-
-IN_AUTH = ('test', '123')
-IN_GOOD_STATUS = (200, )
-IN_SEP = '\t'
-
-SCHEME_IN = [
-    'unix_timestamp',
-    'datetime',
-    'email',
-    'skin_type',
-    'questions_data',
-    'answers_data',
-    'results_data_prod',
-    'results_data_test']
-
-in_auth = IN_AUTH
-in_good_status = IN_GOOD_STATUS
-in_sep = IN_SEP
-scheme_in = SCHEME_IN
+in_auth = os.getenv('IN_AUTH')
+in_good_status = os.getenv('IN_GOOD_STATUS')
+in_sep = os.getenv('IN_SEP')
+scheme_in = os.getenv('SCHEME_IN')
 
 connection_string = os.getenv('PY_DWH_CONNECTION_STRING')
 log_path = os.getenv('LOGGING_PATH') + 'check_your_skin_loader.log'
@@ -61,16 +42,18 @@ class tests_results_importer(base_importer):
         return message
 
     async def get_tests_results_for_a_date(self, date):
+        logger.info('Getting tests results for %s -- start', str(date))
 
         url = f"https://checkyourskin.carely.group/wp-content/themes/art&fact/inc/api/csv.php?date={date}"
         auth = aiohttp.BasicAuth(*in_auth) if in_auth else None
         self.df = pd.DataFrame()
-        counter = 0
 
         async with aiohttp.request('get', url, auth=auth) as r:
 
             if r.status not in in_good_status:
+                logger.info('Bad http status %s', str(r.status))
                 raise ValueError(f'Bad http status {r.status}')
+
             is_header = True
             async for line in r.content:
                 line = line.decode('UTF-8').strip('\n')
@@ -78,6 +61,7 @@ class tests_results_importer(base_importer):
                 if is_header:
                     scheme_diff = set(scheme_in) ^ set(line.split(in_sep))
                     if scheme_diff:
+                        logger.info('Scheme different in keys: %s', str(list(scheme_diff)))
                         raise KeyError(f'Scheme different in keys: {list(scheme_diff)}')
                     is_header = False
                     continue
@@ -148,10 +132,8 @@ class tests_results_importer(base_importer):
                                      'question_num',
                                      'index',
                                      'data']]
-
                 self.df = self.df.append(data_out, ignore_index=True)
-                counter += 1
-        print(f'Completed {counter} results for {date}')
+        logger.info('Getting tests results for %s -- finish', str(date))
         return self.df
 
     def get_tests_results_final(self):
