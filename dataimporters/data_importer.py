@@ -13,26 +13,27 @@ from dateutil.rrule import rrule, DAILY
 import nest_asyncio
 nest_asyncio.apply()
 
-load_dotenv()
-in_auth = os.getenv('IN_AUTH')
-in_good_status = os.getenv('IN_GOOD_STATUS')
-in_sep = os.getenv('IN_SEP')
-scheme_in = os.getenv('SCHEME_IN')
-
-connection_string = os.getenv('PY_DWH_CONNECTION_STRING')
-log_path = os.getenv('LOGGING_PATH') + 'check_your_skin_loader.log'
-
-FORMAT = '%(asctime)-15s %(name)s %(levelname)s %(message)s'
-logging.basicConfig(format=FORMAT, filename=log_path,level=logging.INFO)
 logger = logging.getLogger('urbn.loader.ss')
 
+in_auth = ('test', '123')
+in_good_status = (200, )
+in_sep = '\t'
+scheme_in = [
+    'unix_timestamp',
+    'datetime',
+    'email',
+    'skin_type',
+    'questions_data',
+    'answers_data',
+    'results_data_prod',
+    'results_data_test']
 
 class tests_results_importer(base_importer):
 
     def fix_and_json(self, s):
         return json.loads(s.replace('\\"', '"'))
 
-    def iter_dates(self, date_from=datetime.date(2021, 10, 1)):
+    def iter_dates(self, date_from=datetime.date(2021, 10, 4)):
         for dt in rrule(DAILY, dtstart=date_from, until=datetime.date.today()):
             yield dt.strftime("%Y-%m-%d")
 
@@ -47,6 +48,7 @@ class tests_results_importer(base_importer):
         url = f"https://checkyourskin.carely.group/wp-content/themes/art&fact/inc/api/csv.php?date={date}"
         auth = aiohttp.BasicAuth(*in_auth) if in_auth else None
         self.df = pd.DataFrame()
+        counter = 0
 
         async with aiohttp.request('get', url, auth=auth) as r:
 
@@ -133,26 +135,28 @@ class tests_results_importer(base_importer):
                                      'index',
                                      'data']]
                 self.df = self.df.append(data_out, ignore_index=True)
-        logger.info('Getting tests results for %s -- finish', str(date))
+                counter += 1
+        logger.info('Completed %s results', str(counter))
+        # logger.info('Getting tests results for %s -- finish', str(date))
         return self.df
 
     def get_tests_results_final(self):
-        self.df = pd.DataFrame()
+        self.df_final = pd.DataFrame()
         for d in self.iter_dates():
             c = asyncio.get_event_loop().run_until_complete(self.get_tests_results_for_a_date(d))
-            self.df = self.df.append(c, ignore_index=True)
-            self.df = self.df.to_dict(orient='records')
-        return self.df
+            self.df_final = self.df_final.append(c, ignore_index=True)
+        self.df_final = self.df_final.to_dict(orient='records')
+        return self.df_final
 
     def save_tests_results(self):
         logger.info('Importing tests results to database -- start',)
         try:
-            list_of_entity_check_your_skin = [entity_check_your_skin(**e) for e in self.df]
+            self.session.query(entity_check_your_skin).delete()
+            list_of_entity_check_your_skin = [entity_check_your_skin(**e) for e in self.df_final]
             self.session.add_all(list_of_entity_check_your_skin)
             self.session.commit()
             logger.info('Importing tests results to database -- finish')
         except SQLAlchemyError as err:
             logger.info('SQLAlchemyError', err)
             raise SystemExit(err)
-
 
