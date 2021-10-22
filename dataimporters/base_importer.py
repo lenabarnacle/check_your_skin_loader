@@ -1,6 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+from datamodels.msg_log import entity_msg_log
+
 
 class base_importer():
     def connect(self, connection_string):
