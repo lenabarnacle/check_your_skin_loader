@@ -16,6 +16,7 @@ from dateutil.rrule import rrule, DAILY
 
 load_dotenv()
 logger = logging.getLogger('urbn.loader.check_your_skin')
+domain = os.getenv('DOMAIN')
 
 
 def fix_and_json(s):
@@ -32,14 +33,14 @@ def iter_dates(date_from=datetime.date(2021, 10, 4)):
         yield dt.strftime("%Y-%m-%d")
 
 
-class tests_results_importer(base_importer):
+class check_your_skin_loader(base_importer):
 
 
     async def get_tests_results_for_a_date(self, date):
         logger.info('Getting tests results for %s -- start', str(date))
-        url = f"{os.getenv('DOMAIN')}{'wp-content/themes/art&fact/inc/api/csv.php?date='}{str(date)}"
+        url = f"{domain}{'wp-content/themes/art&fact/inc/api/csv.php?date='}{str(date)}"
         auth = aiohttp.BasicAuth(*const.IN_AUTH) if const.IN_AUTH else None
-        data_final = []
+        dict_list = []
 
         async with aiohttp.request('get', url, auth=auth) as r:
 
@@ -66,10 +67,10 @@ class tests_results_importer(base_importer):
                         data[k] = data_raw[i][1:-1]
                     else:
                         data[k] = data_raw[i]
-                data_final.append(data)
+                dict_list.append(data)
 
         logger.info('Getting tests results for %s -- finish', str(date))
-        return data_final
+        return dict_list
 
 
     def transform_data(self, dict_list):
@@ -79,13 +80,13 @@ class tests_results_importer(base_importer):
 
         for data in dict_list:
 
-            data['answers_data'] = fix_and_json(data['answers_data'])
-            answers_data = pd.DataFrame.from_dict(data['answers_data'], orient='index')[1:]
+            answers_data = fix_and_json(data['answers_data'])
+            answers_data = pd.DataFrame.from_dict(answers_data, orient='index')[1:]
             if answers_data.empty:
                 continue
 
-            data['questions_data'] = fix_and_json(data['questions_data'])
-            questions_data = pd.DataFrame.from_dict(data['questions_data'], orient='index')[1:]
+            questions_data = fix_and_json(data['questions_data'])
+            questions_data = pd.DataFrame.from_dict(questions_data, orient='index')[1:]
 
             test_data = questions_data.merge(answers_data,
                                              how='left',
@@ -152,9 +153,9 @@ class tests_results_importer(base_importer):
     def get_tests_results_final(self):
         df_final = pd.DataFrame()
         for d in iter_dates():
-            c = asyncio.get_event_loop().run_until_complete(self.get_tests_results_for_a_date(d))
-            c_transformed = self.transform_data(c)
-            df_final = df_final.append(c_transformed, ignore_index=True)
+            dict_list = asyncio.get_event_loop().run_until_complete(self.get_tests_results_for_a_date(d))
+            df = self.transform_data(dict_list)
+            df_final = df_final.append(df, ignore_index=True)
         dict_final = df_final.to_dict(orient='records')
         return dict_final
 
@@ -170,6 +171,6 @@ class tests_results_importer(base_importer):
             logger.info('SQLAlchemyError', err)
             raise SystemExit(err)
 
-    def check_your_skin_loader_call(self):
+    def run_loader(self):
         dict_final = self.get_tests_results_final()
         self.save_tests_results(dict_final)
