@@ -3,12 +3,12 @@ from sqlalchemy import Column, Sequence, Table, MetaData
 
 Base = declarative_base()
 
-table_check_your_skin = Table("table_check_your_skin",
+table_check_your_skin = Table("check_your_skin",
                               MetaData(schema="sa"),
                               Column("test_id", primary_key=True),
-                              Column("data_category"),
+                              Column("data_category", primary_key=True),
                               Column("question_num"),
-                              Column("index"),
+                              Column("index", primary_key=True),
                               Column("data"))
 
 class entity_check_your_skin(Base):
