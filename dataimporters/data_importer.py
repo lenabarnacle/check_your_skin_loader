@@ -40,7 +40,7 @@ class CheckYourSkinLoader(base_importer):
 
     def __enter__(self):
         self.connect(CONNECTION_STRING)
-        return CheckYourSkinLoader()
+        return self
 
     def __exit__(self, type, value, traceback):
         return self.disconnect()
