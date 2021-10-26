@@ -38,11 +38,12 @@ def iter_dates(date_from=datetime.date(2021, 10, 4)):
 
 class CheckYourSkinLoader(base_importer):
 
-    # def __enter__(self):
-    #     self.connect(CONNECTION_STRING)
-    #
-    # def __exit__(self, type, value, traceback):
-    #     return self.disconnect()
+    def __enter__(self):
+        self.connect(CONNECTION_STRING)
+        return CheckYourSkinLoader()
+
+    def __exit__(self, type, value, traceback):
+        return self.disconnect()
 
     async def get_tests_results_for_a_date(self, date):
         logger.info('Getting tests results for %s -- start', str(date))

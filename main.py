@@ -14,12 +14,12 @@ logger = logging.getLogger('urbn.loader.check_your_skin')
 
 def check_your_skin_loader():
     logger.info('Start Check_your_skin_tests_results import')
-    # with CheckYourSkinLoader() as importer:
-    #     importer.run_loader()
-    importer = CheckYourSkinLoader()
-    importer.connect(CONNECTION_STRING)
-    importer.run_loader()
-    importer.disconnect()
+    with CheckYourSkinLoader() as importer:
+        importer.run_loader()
+    # importer = CheckYourSkinLoader()
+    # importer.connect(CONNECTION_STRING)
+    # importer.run_loader()
+    # importer.disconnect()
     logger.info('End Check_your_skin_tests_results import')
 
-# check_your_skin_loader()
+check_your_skin_loader()
