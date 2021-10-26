@@ -15,8 +15,11 @@ from dateutil.rrule import rrule, DAILY
 # nest_asyncio.apply()
 
 load_dotenv()
+CONNECTION_STRING = os.getenv('PY_DWH_CONNECTION_STRING')
+IN_AUTH = (os.getenv('LOGIN'), os.getenv('PASSWORD'))
+DOMAIN = os.getenv('DOMAIN')
+
 logger = logging.getLogger('urbn.loader.check_your_skin')
-domain = os.getenv('DOMAIN')
 
 
 def fix_and_json(s):
@@ -33,14 +36,19 @@ def iter_dates(date_from=datetime.date(2021, 10, 4)):
         yield dt.strftime("%Y-%m-%d")
 
 
-class check_your_skin_loader(base_importer):
+class CheckYourSkinLoader(base_importer):
 
+    # def __enter__(self):
+    #     self.connect(CONNECTION_STRING)
+    #
+    # def __exit__(self, type, value, traceback):
+    #     return self.disconnect()
 
     async def get_tests_results_for_a_date(self, date):
         logger.info('Getting tests results for %s -- start', str(date))
-        url = f"{domain}{'wp-content/themes/art&fact/inc/api/csv.php?date='}{str(date)}"
-        auth = aiohttp.BasicAuth(*const.IN_AUTH) if const.IN_AUTH else None
-        dict_list = []
+        url = f"{DOMAIN}{'wp-content/themes/art&fact/inc/api/csv.php?date='}{str(date)}"
+        auth = aiohttp.BasicAuth(*IN_AUTH) if IN_AUTH else None
+        reports_data = []
 
         async with aiohttp.request('get', url, auth=auth) as r:
 
@@ -67,18 +75,17 @@ class check_your_skin_loader(base_importer):
                         data[k] = data_raw[i][1:-1]
                     else:
                         data[k] = data_raw[i]
-                dict_list.append(data)
+                reports_data.append(data)
 
         logger.info('Getting tests results for %s -- finish', str(date))
-        return dict_list
+        return reports_data
 
-
-    def transform_data(self, dict_list):
+    def transform_data(self, reports_data):
         logger.info('Transforming tests results -- start')
 
         df = pd.DataFrame()
 
-        for data in dict_list:
+        for data in reports_data:
 
             answers_data = fix_and_json(data['answers_data'])
             answers_data = pd.DataFrame.from_dict(answers_data, orient='index')[1:]
@@ -153,8 +160,8 @@ class check_your_skin_loader(base_importer):
     def get_tests_results_final(self):
         df_final = pd.DataFrame()
         for d in iter_dates():
-            dict_list = asyncio.get_event_loop().run_until_complete(self.get_tests_results_for_a_date(d))
-            df = self.transform_data(dict_list)
+            reports_data = asyncio.get_event_loop().run_until_complete(self.get_tests_results_for_a_date(d))
+            df = self.transform_data(reports_data)
             df_final = df_final.append(df, ignore_index=True)
         dict_final = df_final.to_dict(orient='records')
         return dict_final

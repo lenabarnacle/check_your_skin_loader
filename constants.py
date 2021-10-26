@@ -1,5 +1,4 @@
 IN_SEP = '\t'
-IN_AUTH = ('test', '123')
 IN_GOOD_STATUS = (200, )
 SCHEME_IN = [
     'unix_timestamp',
