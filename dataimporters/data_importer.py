@@ -16,8 +16,8 @@ from dateutil.rrule import rrule, DAILY
 
 load_dotenv()
 CONNECTION_STRING = os.getenv('PY_DWH_CONNECTION_STRING')
-IN_AUTH = (os.getenv('LOGIN'), os.getenv('PASSWORD'))
-DOMAIN = os.getenv('DOMAIN')
+IN_AUTH = (os.getenv('CHECK_YOUR_SKIN_LOGIN'), os.getenv('CHECK_YOUR_SKIN_PASSWORD'))
+DOMAIN = os.getenv('CHECK_YOUR_SKIN_DOMAIN_1')
 
 logger = logging.getLogger('urbn.loader.check_your_skin')
 
