@@ -138,6 +138,9 @@ class CheckYourSkinLoader(base_importer):
             general_data = pd.DataFrame.from_dict(data, orient='index')
             general_data = general_data.rename(columns={0: 'data'})
             general_data = general_data[:4].reset_index()
+            general_data = pd.concat([
+                pd.DataFrame({'index': ['domain'],'data': [DOMAIN]}),
+                general_data], ignore_index=True)
             general_data['data_category'] = 'general'
             general_data['question_num'] = None
             general_data = general_data[['data_category',
