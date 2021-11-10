@@ -1,4 +1,4 @@
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
 from datamodels.datamodel import entity_check_your_skin
 from dataimporters.base_importer import base_importer
@@ -11,15 +11,12 @@ import os
 import asyncio, aiohttp, datetime, json
 from dateutil.rrule import rrule, DAILY
 
-# import nest_asyncio
-# nest_asyncio.apply()
-
-load_dotenv()
+# load_dotenv()
 CONNECTION_STRING = os.getenv('PY_DWH_CONNECTION_STRING')
 IN_AUTH = (os.getenv('CHECK_YOUR_SKIN_LOGIN'), os.getenv('CHECK_YOUR_SKIN_PASSWORD'))
-DOMAIN = os.getenv('CHECK_YOUR_SKIN_DOMAIN_1')
+DOMAIN = os.getenv('CHECK_YOUR_SKIN_DOMAIN')
 
-logger = logging.getLogger('urbn.loader.check_your_skin')
+logger = logging.getLogger('check_your_skin_logger')
 
 
 def fix_and_json(s):
@@ -78,7 +75,7 @@ class CheckYourSkinLoader(base_importer):
                         data[k] = data_raw[i]
                 reports_data.append(data)
 
-        logger.info('Getting tests results for %s -- finish', str(date))
+        logger.info('Got %s tests results', str(len(reports_data)))
         return reports_data
 
     def transform_data(self, reports_data):
