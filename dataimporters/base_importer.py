@@ -5,8 +5,8 @@ from datamodels.msg_log import entity_msg_log
 
 
 class base_importer():
-    def connect(self, CONNECTION_STRING):
-        self.engine = create_engine(CONNECTION_STRING)
+    def connect(self, connection_string):
+        self.engine = create_engine(connection_string)
         self.Session = sessionmaker(bind=self.engine)
         self.session = self.Session()
 
