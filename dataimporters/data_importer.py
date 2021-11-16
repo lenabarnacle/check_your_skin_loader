@@ -135,9 +135,6 @@ class CheckYourSkinLoader(base_importer):
             general_data = pd.DataFrame.from_dict(data, orient='index')
             general_data = general_data.rename(columns={0: 'data'})
             general_data = general_data[:4].reset_index()
-            general_data = pd.concat([
-                pd.DataFrame({'index': ['domain'],'data': [DOMAIN]}),
-                general_data], ignore_index=True)
             general_data['data_category'] = 'general'
             general_data['question_num'] = None
             general_data = general_data[['data_category',
@@ -149,7 +146,9 @@ class CheckYourSkinLoader(base_importer):
                                   test_data,
                                   results_data], ignore_index=True)
             data_out['test_id'] = get_hash(f"{data['unix_timestamp']}{data['email']}")
+            data_out['domain'] = DOMAIN
             data_out = data_out[['test_id',
+                                 'domain',
                                  'data_category',
                                  'question_num',
                                  'index',
@@ -170,7 +169,7 @@ class CheckYourSkinLoader(base_importer):
     def save_tests_results(self, dict_final):
         logger.info('Importing tests results to database -- start')
         try:
-            self.session.query(entity_check_your_skin).delete()
+            self.session.query(entity_check_your_skin).filter(entity_check_your_skin.domain == DOMAIN).delete()
             list_of_entity_check_your_skin = [entity_check_your_skin(**e) for e in dict_final]
             self.session.add_all(list_of_entity_check_your_skin)
             self.session.commit()
