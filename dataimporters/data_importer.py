@@ -1,4 +1,4 @@
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
 from datamodels.datamodel import entity_check_your_skin
 from dataimporters.base_importer import base_importer
@@ -11,7 +11,7 @@ import os
 import asyncio, aiohttp, datetime, json
 from dateutil.rrule import rrule, DAILY
 
-# load_dotenv()
+load_dotenv()
 CONNECTION_STRING = os.getenv('PY_DWH_CONNECTION_STRING')
 IN_AUTH = (os.getenv('CHECK_YOUR_SKIN_LOGIN'), os.getenv('CHECK_YOUR_SKIN_PASSWORD'))
 DOMAIN = os.getenv('CHECK_YOUR_SKIN_DOMAIN')

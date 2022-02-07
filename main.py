@@ -1,9 +1,9 @@
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 from dataimporters.data_importer import CheckYourSkinLoader
 import logging
 import os
 
-# load_dotenv()
+load_dotenv()
 # log_path = os.path.join(os.getenv('LOGGING_PATH'), 'check_your_skin_loader.log')
 CONNECTION_STRING = os.getenv('PY_DWH_CONNECTION_STRING')
 
