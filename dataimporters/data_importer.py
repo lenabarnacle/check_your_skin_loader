@@ -1,15 +1,16 @@
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from datamodels.datamodel import entity_check_your_skin
 from dataimporters.base_importer import base_importer
+from datetime import date, datetime, timedelta
 import constants as const
 import pandas as pd
 import logging
 import hashlib
 import os
 
-import asyncio, aiohttp, datetime, json
-from dateutil.rrule import rrule, DAILY
+import asyncio, aiohttp, json
 
 load_dotenv()
 CONNECTION_STRING = os.getenv('PY_DWH_CONNECTION_STRING')
@@ -28,9 +29,9 @@ def get_hash(string):
     return hashlib.sha1(string).hexdigest()
 
 
-def iter_dates(date_from=datetime.date(2021, 10, 4)):
-    for dt in rrule(DAILY, dtstart=date_from, until=datetime.date.today()):
-        yield dt.strftime("%Y-%m-%d")
+def get_dates_list(start_date, end_date=date.today() + timedelta(1)):
+    for n in range(int((end_date - start_date).days)):
+        yield start_date + timedelta(n)
 
 
 class CheckYourSkinLoader(base_importer):
@@ -41,6 +42,25 @@ class CheckYourSkinLoader(base_importer):
 
     def __exit__(self, type, value, traceback):
         return self.disconnect()
+
+    def get_start_date(self, connection_string=CONNECTION_STRING):
+        logger.info('Getting the start date')
+        query = f'''select max(check_your_skin."data"::date) as start_date from sa.check_your_skin
+                where check_your_skin."domain" = '{DOMAIN}' and check_your_skin.index = 'datetime'
+                '''
+        start_date = pd.read_sql(query, create_engine(connection_string))
+        start_date = start_date['start_date'][0]
+        if start_date:
+            create_engine(connection_string).execute(
+                f'''delete from sa.check_your_skin
+                where check_your_skin."domain" = '{DOMAIN}' and check_your_skin.index = 'datetime'
+                and check_your_skin.data::timestamp::date >= '{start_date}'
+                ''')
+        else:
+            start_date = date(2021,10,1)
+        logger.info(f'Start date is {start_date}')
+
+        return start_date
 
     async def get_tests_results_for_a_date(self, date):
         logger.info('Getting tests results for %s -- start', str(date))
@@ -157,19 +177,10 @@ class CheckYourSkinLoader(base_importer):
         logger.info('Transforming tests results -- finish')
         return df
 
-    def get_tests_results_final(self):
-        df_final = pd.DataFrame()
-        for d in iter_dates():
-            reports_data = asyncio.get_event_loop().run_until_complete(self.get_tests_results_for_a_date(d))
-            df = self.transform_data(reports_data)
-            df_final = df_final.append(df, ignore_index=True)
-        dict_final = df_final.to_dict(orient='records')
-        return dict_final
-
     def save_tests_results(self, dict_final):
         logger.info('Importing tests results to database -- start')
         try:
-            self.session.query(entity_check_your_skin).filter(entity_check_your_skin.domain == DOMAIN).delete()
+            self.session.query(entity_check_your_skin)
             list_of_entity_check_your_skin = [entity_check_your_skin(**e) for e in dict_final]
             self.session.add_all(list_of_entity_check_your_skin)
             self.session.commit()
@@ -179,5 +190,12 @@ class CheckYourSkinLoader(base_importer):
             raise SystemExit(err)
 
     def run_loader(self):
-        dict_final = self.get_tests_results_final()
+        start_date = self.get_start_date()
+        dates_range = get_dates_list(start_date)
+        df_final = pd.DataFrame()
+        for d in dates_range:
+            reports_data = asyncio.get_event_loop().run_until_complete(self.get_tests_results_for_a_date(d))
+            df = self.transform_data(reports_data)
+            df_final = df_final.append(df, ignore_index=True)
+        dict_final = df_final.to_dict(orient='records')
         self.save_tests_results(dict_final)
