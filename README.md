@@ -1,3 +1,1 @@
-# check_your_skin_loader
-
-Загрузка данных из сервиса по подбору средств (checkyourskin.carely.group)
+Extracting, transforming and loading customers online test data.
